@@ -48,6 +48,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -188,6 +189,10 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
 
     private ArrayList<LiveLocation> markers = new ArrayList<>();
     private SparseArray<LiveLocation> markersMap = new SparseArray<>();
+
+    private int followingLocation = 0;
+    private Circle followCircle = null;
+    private ValueAnimator followCircleAnimator = null;
 
     private ArrayList<VenueLocation> placeMarkers = new ArrayList<>();
 
@@ -397,6 +402,8 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
             animator.start();
 
             views.put(marker, frameLayout);
+
+            endFollowLocation();
 
             googleMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()), 300, null);
         }
@@ -1038,6 +1045,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                     }
                 }
             } else if (locationType == LOCATION_TYPE_GROUP_VIEW) {
+                endFollowLocation();
                 if (googleMap != null) {
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(chatLocation.geo_point.lat, chatLocation.geo_point._long), googleMap.getMaxZoomLevel() - 4));
                 }
@@ -1086,7 +1094,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                     }
                 } else if (object instanceof LiveLocation) {
                     LiveLocation liveLocation = (LiveLocation) object;
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(liveLocation.marker.getPosition(), googleMap.getMaxZoomLevel() - 4));
+                    initFollowLocation(liveLocation.id);
                 }
             }
         });
@@ -1320,6 +1328,61 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
         updateEmptyView();
 
         return fragmentView;
+    }
+
+    private void initFollowLocation(int did) {
+        if (followingLocation == did) {
+            return;
+        }
+
+        endFollowLocation();
+
+        followingLocation = did;
+
+        final float radius = 60;
+        followCircle = googleMap.addCircle(new CircleOptions()
+                .radius(0)
+                .fillColor(Theme.getColor(Theme.key_location_actionActiveIcon))
+                .strokeWidth(0)
+                .center(new LatLng(0, 0)));
+        followCircleAnimator = ValueAnimator.ofFloat(0, 1).setDuration(3000);
+        followCircleAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        followCircleAnimator.setRepeatMode(ValueAnimator.RESTART);
+        followCircleAnimator.setInterpolator(new DecelerateInterpolator(2));
+        followCircleAnimator.addUpdateListener(animator -> {
+            float value = (float) animator.getAnimatedValue();
+            int alpha = (int) ((1 - value) * 255);
+            alpha = ((int) alpha << 24) | (0x00ffffff);
+            followCircle.setFillColor(alpha & (0xff000000 | followCircle.getFillColor()));
+            followCircle.setRadius(radius * value);
+        });
+        followCircleAnimator.start();
+
+        updateFollowingLocation();
+    }
+
+    private void endFollowLocation() {
+        if (followingLocation == 0) {
+            return;
+        }
+
+        followCircleAnimator.cancel();
+        followCircleAnimator = null;
+        followCircle.remove();
+        followCircle = null;
+
+        followingLocation = 0;
+    }
+
+    private void updateFollowingLocation() {
+        if (googleMap != null && followingLocation != 0) {
+            LiveLocation marker = markersMap.get(followingLocation);
+
+            if (marker != null) {
+                followCircle.setCenter(marker.marker.getPosition());
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.marker.getPosition(), googleMap.getMaxZoomLevel() - 4));
+            }
+        }
     }
 
     private boolean isActiveThemeDark() {
@@ -1640,6 +1703,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                         }
                     }
 
+                    liveLocation.marker.setTag(liveLocation);
                     markers.add(liveLocation);
                     markersMap.put(liveLocation.id, liveLocation);
                     LocationController.SharingLocationInfo myInfo = getLocationController().getSharingLocationInfo(dialogId);
@@ -1749,6 +1813,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
             if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
                 showSearchPlacesButton(true);
                 removeInfoView();
+                endFollowLocation();
 
                 if (!scrolling && (locationType == LOCATION_TYPE_SEND || locationType == LOCATION_TYPE_SEND_WITH_LIVE) && listView.getChildCount() > 0) {
                     View view = listView.getChildAt(0);
@@ -1773,16 +1838,24 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
             isFirstLocation = false;
         });
         googleMap.setOnMarkerClickListener(marker -> {
-            if (!(marker.getTag() instanceof VenueLocation)) {
+            if (marker.getTag() instanceof VenueLocation) {
+                endFollowLocation();
+                markerImageView.setVisibility(View.INVISIBLE);
+                if (!userLocationMoved) {
+                    locationButton.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_location_actionIcon), PorterDuff.Mode.MULTIPLY));
+                    locationButton.setTag(Theme.key_location_actionIcon);
+                    userLocationMoved = true;
+                }
+                overlayView.addInfoView(marker);
                 return true;
             }
-            markerImageView.setVisibility(View.INVISIBLE);
-            if (!userLocationMoved) {
-                locationButton.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_location_actionIcon), PorterDuff.Mode.MULTIPLY));
-                locationButton.setTag(Theme.key_location_actionIcon);
-                userLocationMoved = true;
+
+            if (marker.getTag() instanceof LiveLocation) {
+                initFollowLocation(((LiveLocation) marker.getTag()).id);
+                return true;
             }
-            overlayView.addInfoView(marker);
+
+            endFollowLocation();
             return true;
         });
         googleMap.setOnCameraMoveListener(() -> {
@@ -2409,6 +2482,9 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                 if (messageObject.isLiveLocation()) {
                     addUserMarker(messageObject.messageOwner);
                     added = true;
+                    if (did == followingLocation) {
+                        updateFollowingLocation();
+                    }
                 } else if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionGeoProximityReached) {
                     int lowerId = (int) messageObject.getDialogId();
                     if (lowerId > 0) {
@@ -2458,6 +2534,10 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                                     liveLocation.hasRotation = false;
                                 }
                             }
+                        }
+
+                        if (did == followingLocation) {
+                            updateFollowingLocation();
                         }
                     }
                     updated = true;
