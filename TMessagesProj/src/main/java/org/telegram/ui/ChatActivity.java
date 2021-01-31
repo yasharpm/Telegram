@@ -15358,6 +15358,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                 }
             }
+
+            for (int c = 0; c < messages.size(); c++) {
+                if (messages.get(c).replyMessageObject != null && messageObject.equals(messages.get(c).replyMessageObject)) {
+                    messages.get(c).replyMessageObject = messageObject;
+                    messages.get(c).forceUpdate = true;
+
+                    chatAdapter.updateRowAtPosition(chatAdapter.messagesStartRow + c);
+                }
+            }
         }
         if (newGroups != null) {
             for (int b = 0; b < newGroups.size(); b++) {
