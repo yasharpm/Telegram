@@ -1374,6 +1374,13 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
         followingLocation = 0;
     }
 
+    @Override
+    public void finishFragment(boolean animated) {
+        endFollowLocation();
+
+        super.finishFragment(animated);
+    }
+
     private void updateFollowingLocation() {
         if (googleMap != null && followingLocation != 0) {
             LiveLocation marker = markersMap.get(followingLocation);
