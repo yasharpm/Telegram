@@ -3443,7 +3443,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private boolean checkDeletingTask(boolean runnable) {
         int currentServerTime = getConnectionsManager().getCurrentTime();
 
-        if (currentDeletingTaskMids != null && (runnable || currentDeletingTaskTime != 0 && currentDeletingTaskTime <= currentServerTime)) {
+        if (currentDeletingTaskMids != null && (runnable || currentDeletingTaskTime != 0 && currentDeletingTaskTime < currentServerTime)) {
             currentDeletingTaskTime = 0;
             if (currentDeleteTaskRunnable != null && !runnable) {
                 Utilities.stageQueue.cancelRunnable(currentDeleteTaskRunnable);
