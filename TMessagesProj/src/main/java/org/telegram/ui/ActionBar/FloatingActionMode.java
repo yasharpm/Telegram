@@ -32,6 +32,7 @@ import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.ui.Components.SizeNotifierFrameLayout;
 
 import java.util.Arrays;
 
@@ -147,6 +148,17 @@ public final class FloatingActionMode extends ActionMode {
         mOriginatingView.getLocationOnScreen(mViewPositionOnScreen);
         mOriginatingView.getRootView().getLocationOnScreen(mRootViewPositionOnScreen);
         mOriginatingView.getGlobalVisibleRect(mViewRectOnScreen);
+
+        if (mOriginatingView.getParent() instanceof SizeNotifierFrameLayout) {
+                SizeNotifierFrameLayout sizeNotifier = (SizeNotifierFrameLayout) mOriginatingView.getParent();
+
+                int keyboardSize = sizeNotifier.getKeyboardHeight();
+
+                if (keyboardSize > AndroidUtilities.dp(20)) {
+                    mViewRectOnScreen.bottom += keyboardSize - mOriginatingView.getTop();
+                }
+        }
+
         mViewRectOnScreen.offset(mRootViewPositionOnScreen[0], mRootViewPositionOnScreen[1]);
         if (!Arrays.equals(mViewPositionOnScreen, mPreviousViewPositionOnScreen) || !mViewRectOnScreen.equals(mPreviousViewRectOnScreen)) {
             repositionToolbar();
