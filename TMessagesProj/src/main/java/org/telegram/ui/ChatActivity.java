@@ -17588,6 +17588,22 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         return caption;
     }
 
+    private int getMessageRepliesCount(MessageObject messageObject, MessageObject.GroupedMessages group) {
+        if (group == null) {
+            return messageObject.getRepliesCount();
+        }
+
+        ArrayList<MessageObject> messages = group.messages;
+
+        int repliesCount = 0;
+
+        for (int a = 0; a < messages.size(); a++) {
+            repliesCount += messages.get(a).getRepliesCount();
+        }
+
+        return repliesCount;
+    }
+
     private void createMenu(View v, boolean single, boolean listView, float x, float y, boolean searchGroup) {
         if (actionBar.isActionModeShowed()) {
             return;
@@ -17713,6 +17729,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             ArrayList<CharSequence> items = new ArrayList<>();
             final ArrayList<Integer> options = new ArrayList<>();
 
+            int replyCount = getMessageRepliesCount(message, groupedMessages);
+
             if (type >= 0 || type == -1 && single && (message.isSending() || message.isEditing()) && currentEncryptedChat == null) {
                 selectedObject = message;
                 selectedObjectGroup = groupedMessages;
@@ -17745,8 +17763,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             options.add(8);
                             icons.add(R.drawable.msg_reply);
                         }
-                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && message.hasReplies() && currentChat.megagroup && message.canViewThread()) {
-                            items.add(LocaleController.formatPluralString("ViewReplies", message.getRepliesCount()));
+                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && replyCount > 0 && currentChat.megagroup && message.canViewThread(replyCount > 0)) {
+                            items.add(LocaleController.formatPluralString("ViewReplies", replyCount));
                             options.add(27);
                             icons.add(R.drawable.msg_viewreplies);
                         }
@@ -17819,9 +17837,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             options.add(3);
                             icons.add(R.drawable.msg_copy);
                         }
-                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && (currentChat.has_link || message.hasReplies()) && currentChat.megagroup && message.canViewThread()) {
-                            if (message.hasReplies()) {
-                                items.add(LocaleController.formatPluralString("ViewReplies", message.getRepliesCount()));
+                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && (currentChat.has_link || replyCount > 0) && currentChat.megagroup && message.canViewThread(replyCount > 0)) {
+                            if (replyCount > 0) {
+                                items.add(LocaleController.formatPluralString("ViewReplies", replyCount));
                             } else {
                                 items.add(LocaleController.getString("ViewThread", R.string.ViewThread));
                             }
@@ -18041,9 +18059,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             options.add(3);
                             icons.add(R.drawable.msg_copy);
                         }
-                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && (currentChat.has_link || message.hasReplies()) && currentChat.megagroup && message.canViewThread()) {
-                            if (message.hasReplies()) {
-                                items.add(LocaleController.formatPluralString("ViewReplies", message.getRepliesCount()));
+                        if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && (currentChat.has_link || replyCount > 0) && currentChat.megagroup && message.canViewThread(replyCount > 0)) {
+                            if (replyCount > 0) {
+                                items.add(LocaleController.formatPluralString("ViewReplies", replyCount));
                             } else {
                                 items.add(LocaleController.getString("ViewThread", R.string.ViewThread));
                             }

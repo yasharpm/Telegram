@@ -5346,11 +5346,11 @@ public class MessageObject {
         return messageOwner.replies != null && messageOwner.replies.replies > 0;
     }
 
-    public boolean canViewThread() {
+    public boolean canViewThread(boolean hasReplies) {
         if (messageOwner.action != null) {
             return false;
         }
-        return hasReplies() || replyMessageObject != null && replyMessageObject.messageOwner.replies != null || getReplyTopMsgId() != 0;
+        return hasReplies || replyMessageObject != null && replyMessageObject.messageOwner.replies != null || getReplyTopMsgId() != 0;
     }
 
     public boolean isComments() {
