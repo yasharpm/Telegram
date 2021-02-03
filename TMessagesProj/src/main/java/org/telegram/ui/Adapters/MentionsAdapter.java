@@ -719,43 +719,28 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter {
                 threadId = 0;
             }
             if (chat != null && info != null && info.participants != null && (!ChatObject.isChannel(chat) || chat.megagroup)) {
-                for (int a = -1; a < info.participants.participants.size(); a++) {
+                for (int a = 0; a < info.participants.participants.size(); a++) {
                     String username;
                     String firstName;
                     String lastName;
                     TLObject object;
                     int id;
-                    if (a == -1) {
-                        if (chat == null) {
-                            continue;
-                        }
-                        if (usernameString.length() == 0) {
-                            newResult.add(chat);
-                            continue;
-                        }
-                        firstName = chat.title;
-                        lastName = null;
-                        username = chat.username;
-                        object = chat;
-                        id = -chat.id;
-                    } else {
-                        TLRPC.ChatParticipant chatParticipant = info.participants.participants.get(a);
-                        TLRPC.User user = messagesController.getUser(chatParticipant.user_id);
-                        if (user == null || !usernameOnly && UserObject.isUserSelf(user) || newResultsHashMap.indexOfKey(user.id) >= 0) {
-                            continue;
-                        }
-                        if (usernameString.length() == 0) {
-                            if (!user.deleted) {
-                                newResult.add(user);
-                                continue;
-                            }
-                        }
-                        firstName = user.first_name;
-                        lastName = user.last_name;
-                        username = user.username;
-                        object = user;
-                        id = user.id;
+                    TLRPC.ChatParticipant chatParticipant = info.participants.participants.get(a);
+                    TLRPC.User user = messagesController.getUser(chatParticipant.user_id);
+                    if (user == null || !usernameOnly && UserObject.isUserSelf(user) || newResultsHashMap.indexOfKey(user.id) >= 0) {
+                        continue;
                     }
+                    if (usernameString.length() == 0) {
+                        if (!user.deleted) {
+                            newResult.add(user);
+                            continue;
+                        }
+                    }
+                    firstName = user.first_name;
+                    lastName = user.last_name;
+                    username = user.username;
+                    object = user;
+                    id = user.id;
                     if (!TextUtils.isEmpty(username) && username.toLowerCase().startsWith(usernameString) ||
                             !TextUtils.isEmpty(firstName) && firstName.toLowerCase().startsWith(usernameString) ||
                             !TextUtils.isEmpty(lastName) && lastName.toLowerCase().startsWith(usernameString) ||
