@@ -2376,6 +2376,8 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         ArrayList<Integer> icons = new ArrayList<>(2);
         ArrayList<Integer> options = new ArrayList<>(2);
         boolean isAdmin = false;
+        boolean currentUserHasBanRight = currentChat.admin_rights.ban_users;
+
         if (currentChat.megagroup) {
             isAdmin = accountInstance.getMessagesController().getAdminRank(currentChat.id, participant.user_id) != null;
         } else {
@@ -2401,7 +2403,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                 options.add(1);
             }
         }
-        if (!isAdmin) {
+        if (!isAdmin && currentUserHasBanRight) {
             items.add(LocaleController.getString("VoipGroupUserRemove", R.string.VoipGroupUserRemove));
             icons.add(R.drawable.msg_block2);
             options.add(2);
