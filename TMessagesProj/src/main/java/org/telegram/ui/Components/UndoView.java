@@ -44,6 +44,10 @@ import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 @SuppressWarnings("FieldCanBeLocal")
 public class UndoView extends FrameLayout {
 
@@ -69,8 +73,8 @@ public class UndoView extends FrameLayout {
     private String timeLeftString;
     private int textWidth;
 
-    private int currentAction;
-    private long currentDialogId;
+    private List<Integer> currentActions;
+    private List<Long> currentDialogIds;
     private Runnable currentActionRunnable;
     private Runnable currentCancelRunnable;
 
@@ -239,6 +243,7 @@ public class UndoView extends FrameLayout {
     }
 
     private boolean isTooltipAction() {
+        int currentAction = currentActions.get(0);
         return currentAction == ACTION_ARCHIVE_HIDDEN || currentAction == ACTION_ARCHIVE_HINT || currentAction == ACTION_ARCHIVE_FEW_HINT ||
                 currentAction == ACTION_ARCHIVE_PINNED || currentAction == ACTION_CONTACT_ADDED || currentAction == ACTION_OWNER_TRANSFERED_CHANNEL ||
                 currentAction == ACTION_OWNER_TRANSFERED_GROUP || currentAction == ACTION_QUIZ_CORRECT || currentAction == ACTION_QUIZ_INCORRECT || currentAction == ACTION_CACHE_WAS_CLEARED ||
@@ -248,12 +253,14 @@ public class UndoView extends FrameLayout {
     }
 
     private boolean hasSubInfo() {
+        int currentAction = currentActions.get(0);
         return currentAction == ACTION_QR_SESSION_ACCEPTED || currentAction == ACTION_PROXIMITY_SET || currentAction == ACTION_ARCHIVE_HIDDEN || currentAction == ACTION_ARCHIVE_HINT || currentAction == ACTION_ARCHIVE_FEW_HINT ||
                 currentAction == ACTION_QUIZ_CORRECT || currentAction == ACTION_QUIZ_INCORRECT ||
                 currentAction == ACTION_ARCHIVE_PINNED && MessagesController.getInstance(currentAccount).dialogFilters.isEmpty();
     }
 
     public boolean isMultilineSubInfo() {
+        int currentAction = currentActions.get(0);
         return currentAction == ACTION_THEME_CHANGED || currentAction == ACTION_FILTERS_AVAILABLE || currentAction == ACTION_PROXIMITY_SET;
     }
 
@@ -283,8 +290,12 @@ public class UndoView extends FrameLayout {
             }
             currentCancelRunnable = null;
         }
-        if (currentAction == ACTION_CLEAR || currentAction == ACTION_DELETE) {
-            MessagesController.getInstance(currentAccount).removeDialogAction(currentDialogId, currentAction == ACTION_CLEAR, apply);
+        for (int a = 0, N = currentActions.size(); a < N; a++) {
+            int currentAction = currentActions.get(a);
+            if (currentAction == ACTION_CLEAR || currentAction == ACTION_DELETE) {
+                long did = currentDialogIds.get(a);
+                MessagesController.getInstance(currentAccount).removeDialogAction(did, currentAction == ACTION_CLEAR, apply);
+            }
         }
         if (animated != 0) {
             AnimatorSet animatorSet = new AnimatorSet();
@@ -320,30 +331,38 @@ public class UndoView extends FrameLayout {
     }
 
     public void showWithAction(long did, int action, Runnable actionRunnable) {
-        showWithAction(did, action, null, null, actionRunnable, null);
+        showWithAction(Collections.singletonList(did), Collections.singletonList(action), null, null, actionRunnable, null);
+    }
+
+    public void showWithAction(List<Long> did, List<Integer> actions, Runnable actionRunnable) {
+        showWithAction(did, actions, null, null, actionRunnable, null);
     }
 
     public void showWithAction(long did, int action, Object infoObject) {
-        showWithAction(did, action, infoObject, null, null, null);
+        showWithAction(Collections.singletonList(did), Collections.singletonList(action), infoObject, null, null, null);
     }
 
     public void showWithAction(long did, int action, Runnable actionRunnable, Runnable cancelRunnable) {
-        showWithAction(did, action, null, null, actionRunnable, cancelRunnable);
+        showWithAction(Collections.singletonList(did), Collections.singletonList(action), null, null, actionRunnable, cancelRunnable);
     }
 
     public void showWithAction(long did, int action, Object infoObject, Runnable actionRunnable, Runnable cancelRunnable) {
-        showWithAction(did, action, infoObject, null, actionRunnable, cancelRunnable);
+        showWithAction(Collections.singletonList(did), Collections.singletonList(action), infoObject, null, actionRunnable, cancelRunnable);
     }
 
     public void showWithAction(long did, int action, Object infoObject, Object infoObject2, Runnable actionRunnable, Runnable cancelRunnable) {
+        showWithAction(Collections.singletonList(did), Collections.singletonList(action), infoObject, infoObject2, actionRunnable, cancelRunnable);
+    }
+
+    public void showWithAction(List<Long> did, List<Integer> actions, Object infoObject, Object infoObject2, Runnable actionRunnable, Runnable cancelRunnable) {
         if (currentActionRunnable != null) {
             currentActionRunnable.run();
         }
         isShown = true;
         currentActionRunnable = actionRunnable;
         currentCancelRunnable = cancelRunnable;
-        currentDialogId = did;
-        currentAction = action;
+        currentDialogIds = did;
+        currentActions = actions;
         timeLeft = 5000;
         currentInfoObject = infoObject;
         lastUpdateTime = SystemClock.elapsedRealtime();
@@ -366,6 +385,8 @@ public class UndoView extends FrameLayout {
         layoutParams2.height = LayoutHelper.WRAP_CONTENT;
 
         infoTextView.setMinHeight(0);
+
+        int action = actions.get(0), currentAction = actions.get(0);
 
         if (isTooltipAction()) {
             CharSequence infoText;
@@ -422,14 +443,14 @@ public class UndoView extends FrameLayout {
                 subInfoText = null;
                 icon = R.raw.contact_check;
             } else if (action == ACTION_PROFILE_PHOTO_CHANGED) {
-                if (did > 0) {
+                if (did.get(0) > 0) {
                     if (infoObject == null) {
                         infoText = LocaleController.getString("MainProfilePhotoSetHint", R.string.MainProfilePhotoSetHint);
                     } else {
                         infoText = LocaleController.getString("MainProfileVideoSetHint", R.string.MainProfileVideoSetHint);
                     }
                 } else {
-                    TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat((int) -did);
+                    TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat((int) -did.get(0));
                     if (ChatObject.isChannel(chat) && !chat.megagroup) {
                         if (infoObject == null) {
                             infoText = LocaleController.getString("MainChannelProfilePhotoSetHint", R.string.MainChannelProfilePhotoSetHint);
@@ -475,10 +496,10 @@ public class UndoView extends FrameLayout {
                 icon = R.raw.chats_infotip;
             } else if (action == ACTION_ADDED_TO_FOLDER || action == ACTION_REMOVED_FROM_FOLDER) {
                 MessagesController.DialogFilter filter = (MessagesController.DialogFilter) infoObject2;
-                if (did != 0) {
-                    int lowerId = (int) did;
+                if (did.get(0) != 0) {
+                    int lowerId = did.get(0).intValue();
                     if (lowerId == 0) {
-                        TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance(currentAccount).getEncryptedChat((int) (did >> 32));
+                        TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance(currentAccount).getEncryptedChat((int) (did.get(0) >> 32));
                         lowerId = encryptedChat.user_id;
                     }
                     if (lowerId > 0) {
@@ -796,22 +817,43 @@ public class UndoView extends FrameLayout {
             subinfoTextView.setVisibility(GONE);
             leftImageView.setVisibility(GONE);
 
-            if (currentAction == ACTION_CLEAR) {
-                infoTextView.setText(LocaleController.getString("HistoryClearedUndo", R.string.HistoryClearedUndo));
-            } else {
-                int lowerId = (int) did;
-                if (lowerId < 0) {
-                    TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-lowerId);
-                    if (ChatObject.isChannel(chat) && !chat.megagroup) {
-                        infoTextView.setText(LocaleController.getString("ChannelDeletedUndo", R.string.ChannelDeletedUndo));
-                    } else {
-                        infoTextView.setText(LocaleController.getString("GroupDeletedUndo", R.string.GroupDeletedUndo));
-                    }
+            if (actions.size() == 1) {
+                if (currentAction == ACTION_CLEAR) {
+                    infoTextView.setText(LocaleController.getString("HistoryClearedUndo", R.string.HistoryClearedUndo));
                 } else {
-                    infoTextView.setText(LocaleController.getString("ChatDeletedUndo", R.string.ChatDeletedUndo));
+                    int lowerId = did.get(0).intValue();
+                    if (lowerId < 0) {
+                        TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-lowerId);
+                        if (ChatObject.isChannel(chat) && !chat.megagroup) {
+                            infoTextView.setText(LocaleController.getString("ChannelDeletedUndo", R.string.ChannelDeletedUndo));
+                        } else {
+                            infoTextView.setText(LocaleController.getString("GroupDeletedUndo", R.string.GroupDeletedUndo));
+                        }
+                    } else {
+                        infoTextView.setText(LocaleController.getString("ChatDeletedUndo", R.string.ChatDeletedUndo));
+                    }
+                }
+
+                MessagesController.getInstance(currentAccount).addDialogAction(did.get(0), currentAction == ACTION_CLEAR);
+            }
+            else {
+                boolean allActionsAreClear = true;
+
+                for (int a = 0, N = actions.size(); a < N; a++) {
+                    int ac = actions.get(a);
+                    long dialogId = did.get(a);
+
+                    allActionsAreClear &= ac == ACTION_CLEAR;
+
+                    MessagesController.getInstance(currentAccount).addDialogAction(dialogId, ac == ACTION_CLEAR);
+                }
+
+                if (allActionsAreClear) {
+                    infoTextView.setText(LocaleController.getString("HistoryClearedUndo", R.string.HistoryClearedUndo));
+                } else {
+                    infoTextView.setText(LocaleController.getString("Done", R.string.Done));
                 }
             }
-            MessagesController.getInstance(currentAccount).addDialogAction(did, currentAction == ACTION_CLEAR);
         }
 
         AndroidUtilities.makeAccessibilityAnnouncement(infoTextView.getText() + (subinfoTextView.getVisibility() == VISIBLE ? ". " + subinfoTextView.getText() : ""));
@@ -865,6 +907,7 @@ public class UndoView extends FrameLayout {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        int currentAction = currentActions.get(0);
         if (currentAction == ACTION_DELETE || currentAction == ACTION_CLEAR) {
             int newSeconds = timeLeft > 0 ? (int) Math.ceil(timeLeft / 1000.0f) : 0;
             if (prevSeconds != newSeconds) {
