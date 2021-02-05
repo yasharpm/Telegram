@@ -9254,6 +9254,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         switchingToIndex = index;
 
         boolean isVideo = false;
+        boolean isPhoto = false;
         CharSequence caption = null;
         String newFileName = getFileName(index);
         MessageObject newMessageObject = null;
@@ -9264,6 +9265,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
             newMessageObject = imagesArr.get(switchingToIndex);
             isVideo = newMessageObject.isVideo();
+            isPhoto = newMessageObject.isPhoto() || (newMessageObject.getDocument().thumbs != null && newMessageObject.getDocument().thumbs.size() > 0);
             boolean isInvoice = newMessageObject.isInvoice();
             if (isInvoice) {
                 setItemVisible(masksItem, false, true);
@@ -9430,7 +9432,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 } else {
                     allowShare = true;
                     menuItem.showSubItem(gallery_menu_save);
-                    paintButton.setVisibility(!isVideo && canSendMediaToParentChatActivity() ? View.VISIBLE : View.GONE);
+                    paintButton.setVisibility(isPhoto && canSendMediaToParentChatActivity() ? View.VISIBLE : View.GONE);
                     bottomButtonsLayout.setVisibility(!videoPlayerControlVisible ? View.VISIBLE : View.GONE);
                     if (bottomButtonsLayout.getVisibility() == View.VISIBLE) {
                         menuItem.hideSubItem(gallery_menu_share);
