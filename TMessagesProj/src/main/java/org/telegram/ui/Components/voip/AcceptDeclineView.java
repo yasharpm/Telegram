@@ -212,7 +212,7 @@ public class AcceptDeclineView extends View {
                         animator.start();
                         leftAnimator = animator;
                         if (listener != null) {
-                            if ((!startDrag && Math.abs(dy) < touchSlop && !screenWasWakeup) || leftOffsetX > maxOffset * 0.8f) {
+                            if ((!startDrag && Math.abs(dy) < touchSlop && (!screenWasWakeup || isTouchExplorationEnabled())) || leftOffsetX > maxOffset * 0.8f) {
                                 listener.onDicline();
                             }
                         }
@@ -226,7 +226,7 @@ public class AcceptDeclineView extends View {
                         animator.start();
                         rightAnimator = animator;
                         if (listener != null) {
-                            if ((!startDrag && Math.abs(dy) < touchSlop && !screenWasWakeup) || -rigthOffsetX > maxOffset * 0.8f) {
+                            if ((!startDrag && Math.abs(dy) < touchSlop && (!screenWasWakeup || isTouchExplorationEnabled())) || -rigthOffsetX > maxOffset * 0.8f) {
                                 listener.onAccept();
                             }
                         }
@@ -481,6 +481,10 @@ public class AcceptDeclineView extends View {
 
     public void setScreenWasWakeup(boolean screenWasWakeup) {
         this.screenWasWakeup = screenWasWakeup;
+    }
+
+    private boolean isTouchExplorationEnabled() {
+        return ((AcceptDeclineAccessibilityNodeProvider) getAccessibilityNodeProvider()).accessibilityManager.isTouchExplorationEnabled();
     }
 
     private static abstract class AcceptDeclineAccessibilityNodeProvider extends AccessibilityNodeProvider {
