@@ -117,8 +117,13 @@ public class AdminLogFilterAlert extends BottomSheet {
             pinnedRow = -1;
         }
         leavingRow = rowCount++;
-        callsRow = rowCount;
-        rowCount += 2;
+        if (isMegagroup) {
+            callsRow = rowCount++;
+        }
+        else {
+            callsRow = -1;
+        }
+        rowCount += 1;
         allAdminsRow = rowCount;
 
         shadowDrawable = context.getResources().getDrawable(R.drawable.sheet_shadow_round).mutate();
@@ -226,9 +231,9 @@ public class AdminLogFilterAlert extends BottomSheet {
                     if (isChecked) {
                         currentFilter = new TLRPC.TL_channelAdminLogEventsFilter();
                         currentFilter.join = currentFilter.leave = currentFilter.invite = currentFilter.ban =
-                        currentFilter.unban = currentFilter.kick = currentFilter.unkick = currentFilter.promote =
-                        currentFilter.demote = currentFilter.info = currentFilter.settings = currentFilter.pinned =
-                        currentFilter.edit = currentFilter.delete = currentFilter.group_call = false;
+                                currentFilter.unban = currentFilter.kick = currentFilter.unkick = currentFilter.promote =
+                                        currentFilter.demote = currentFilter.info = currentFilter.settings = currentFilter.pinned =
+                                                currentFilter.edit = currentFilter.delete = currentFilter.group_call = false;
                     } else {
                         currentFilter = null;
                     }
@@ -261,9 +266,9 @@ public class AdminLogFilterAlert extends BottomSheet {
                     if (currentFilter == null) {
                         currentFilter = new TLRPC.TL_channelAdminLogEventsFilter();
                         currentFilter.join = currentFilter.leave = currentFilter.invite = currentFilter.ban =
-                        currentFilter.unban = currentFilter.kick = currentFilter.unkick = currentFilter.promote =
-                        currentFilter.demote = currentFilter.info = currentFilter.settings = currentFilter.pinned =
-                        currentFilter.edit = currentFilter.delete = currentFilter.group_call = true;
+                                currentFilter.unban = currentFilter.kick = currentFilter.unkick = currentFilter.promote =
+                                        currentFilter.demote = currentFilter.info = currentFilter.settings = currentFilter.pinned =
+                                                currentFilter.edit = currentFilter.delete = currentFilter.group_call = true;
                         RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(0);
                         if (holder != null) {
                             ((CheckBoxCell) holder.itemView).setChecked(false, true);
