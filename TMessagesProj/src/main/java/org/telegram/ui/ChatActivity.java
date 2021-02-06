@@ -21694,6 +21694,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (chatMode == MODE_PINNED) {
                         chatActivityDelegate.openReplyMessage(messageId);
                         finishFragment();
+                    } else if (isThreadChat()) {
+                        return false;
                     } else {
                         scrollToMessageId(messageId, fromMessageId, true, 0, false, 0);
                     }
