@@ -1690,6 +1690,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             dialogsLoaded[currentAccount] = true;
         }
         getMessagesController().loadPinnedDialogs(folderId, 0, null);
+        getMessagesController().getBlockedPeers(false);
         return true;
     }
 
@@ -4404,6 +4405,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (onlySelect) {
+            boolean userBlocked = getMessagesController().blockePeers.indexOfKey((int) dialogId) >= 0;
+            if (userBlocked) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle(LocaleController.getString("UserIsBlocked", "UserBlocked", R.string.UserIsBlocked));
+                builder.setMessage(LocaleController.getString("UserIsBlockedAlert", R.string.UserIsBlockedAlert));
+                builder.setNeutralButton(LocaleController.getString("OK", R.string.OK), null);
+                AlertDialog dialog = builder.create();
+                showDialog(dialog);
+                return;
+            }
             if (!validateSlowModeDialog(dialogId)) {
                 return;
             }

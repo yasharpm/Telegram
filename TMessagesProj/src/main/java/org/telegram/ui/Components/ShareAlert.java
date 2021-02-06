@@ -797,6 +797,16 @@ public class ShareAlert extends BottomSheet implements NotificationCenter.Notifi
                 cell.setChecked(false, true);
                 updateSelectedCount(1);
             } else {
+                boolean userBlocked = MessagesController.getInstance(currentAccount).blockePeers.indexOfKey((int) dialog.id) >= 0;
+                if (userBlocked) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                    builder.setTitle(LocaleController.getString("UserIsBlocked", "UserBlocked", R.string.UserIsBlocked));
+                    builder.setMessage(LocaleController.getString("UserIsBlockedAlert", R.string.UserIsBlockedAlert));
+                    builder.setNeutralButton(LocaleController.getString("OK", R.string.OK), null);
+                    AlertDialog alertDialog = builder.create();
+                    alertDialog.show();
+                    return;
+                }
                 selectedDialogs.put(dialog.id, dialog);
                 cell.setChecked(true, true);
                 updateSelectedCount(2);
@@ -1123,6 +1133,8 @@ public class ShareAlert extends BottomSheet implements NotificationCenter.Notifi
         if (listAdapter.dialogs.isEmpty()) {
             NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.dialogsNeedReload);
         }
+
+        MessagesController.getInstance(currentAccount).getBlockedPeers(false);
     }
 
     protected void onSend(LongSparseArray<TLRPC.Dialog> dids, int count) {
