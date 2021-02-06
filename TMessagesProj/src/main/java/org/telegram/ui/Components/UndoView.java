@@ -662,7 +662,7 @@ public class UndoView extends FrameLayout {
             } else if (currentAction == ACTION_FWD_MESSAGES) {
                 Integer count = (Integer) infoObject;
                 if (infoObject2 == null) {
-                    if (did == UserConfig.getInstance(currentAccount).clientUserId) {
+                    if (did.get(0) == UserConfig.getInstance(currentAccount).clientUserId) {
                         if (count == 1) {
                             infoTextView.setText(AndroidUtilities.replaceTags(LocaleController.getString("FwdMessageToSavedMessages", R.string.FwdMessageToSavedMessages)));
                         } else {
@@ -670,7 +670,7 @@ public class UndoView extends FrameLayout {
                         }
                         leftImageView.setAnimation(R.raw.saved_messages, 30, 30);
                     } else {
-                        int lowerId = (int) did;
+                        int lowerId = did.get(0).intValue();
                         if (lowerId < 0) {
                             TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-lowerId);
                             if (count == 1) {
