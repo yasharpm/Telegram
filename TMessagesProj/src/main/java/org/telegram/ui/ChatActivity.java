@@ -10983,6 +10983,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     private void addToSelectedMessages(MessageObject messageObject, boolean outside, boolean last) {
         int prevCantForwardCount = cantForwardMessagesCount;
+        boolean replyWasVisible = shouldReplyButtonBeVisible();
         if (messageObject != null) {
             if (threadMessageObjects != null && threadMessageObjects.contains(messageObject)) {
                 return;
@@ -11152,47 +11153,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 starItem.setIcon(hasUnfavedSelected ? R.drawable.msg_fave : R.drawable.msg_unfave);
                 final int newEditVisibility = canEditMessagesCount == 1 && selectedCount == 1 ? View.VISIBLE : View.GONE;
                 if (replyButton != null) {
-                    boolean allowChatActions = true;
-                    if (currentEncryptedChat != null && AndroidUtilities.getPeerLayerVersion(currentEncryptedChat.layer) < 46 ||
-                            bottomOverlayChat != null && bottomOverlayChat.getVisibility() == View.VISIBLE ||
-                            currentChat != null && (ChatObject.isNotInChat(currentChat) && !isThreadChat() || ChatObject.isChannel(currentChat) && !ChatObject.canPost(currentChat) && !currentChat.megagroup || !ChatObject.canSendMessages(currentChat))) {
-                        allowChatActions = false;
-                    }
+                    boolean replyVisible = shouldReplyButtonBeVisible();
 
-                    int newVisibility;
-
-                    if (chatMode == MODE_SCHEDULED || !allowChatActions || selectedMessagesIds[0].size() != 0 && selectedMessagesIds[1].size() != 0) {
-                        newVisibility = View.GONE;
-                    } else if (selectedCount == 1) {
-                        newVisibility = View.VISIBLE;
-                    } else {
-                        newVisibility = View.VISIBLE;
-                        long lastGroupId = 0;
-                        for (int a = 0; a < 2; a++) {
-                            for (int b = 0, N = selectedMessagesIds[a].size(); b < N; b++) {
-                                MessageObject message = selectedMessagesIds[a].valueAt(b);
-                                long groupId = message.getGroupId();
-                                if (groupId == 0 || lastGroupId != 0 && lastGroupId != groupId) {
-                                    newVisibility = View.GONE;
-                                    break;
-                                }
-                                lastGroupId = groupId;
-                            }
-                            if (newVisibility == View.GONE) {
-                                break;
-                            }
-                        }
-                    }
-                    if (threadMessageObjects != null && newVisibility == View.VISIBLE) {
-                        for (int b = 0, N = selectedMessagesIds[0].size(); b < N; b++) {
-                            MessageObject message = selectedMessagesIds[0].valueAt(b);
-                            if (threadMessageObjects.contains(message)) {
-                                newVisibility = View.GONE;
-                            }
-                        }
-                    }
-
-                    if (replyButton.getVisibility() != newVisibility) {
+                    if (replyVisible != replyWasVisible) {
+                        int newVisibility = replyVisible ? View.VISIBLE : View.GONE;
                         if (replyButtonAnimation != null) {
                             replyButtonAnimation.cancel();
                         }
@@ -11210,12 +11174,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             );
                         }
                         replyButtonAnimation.setDuration(100);
-                        int newVisibilityFinal = newVisibility;
                         replyButtonAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
                                 if (replyButtonAnimation != null && replyButtonAnimation.equals(animation)) {
-                                    if (newVisibilityFinal == View.GONE) {
+                                    if (newVisibility == View.GONE) {
                                         replyButton.setVisibility(View.GONE);
                                     }
                                 }
@@ -11284,6 +11247,43 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             }
         }
+    }
+
+    private boolean shouldReplyButtonBeVisible() {
+        int selectedCount = selectedMessagesIds[0].size() + selectedMessagesIds[1].size();
+        boolean allowChatActions = true;
+        if (currentEncryptedChat != null && AndroidUtilities.getPeerLayerVersion(currentEncryptedChat.layer) < 46 ||
+                bottomOverlayChat != null && bottomOverlayChat.getVisibility() == View.VISIBLE ||
+                currentChat != null && (ChatObject.isNotInChat(currentChat) && !isThreadChat() || ChatObject.isChannel(currentChat) && !ChatObject.canPost(currentChat) && !currentChat.megagroup || !ChatObject.canSendMessages(currentChat))) {
+            allowChatActions = false;
+        }
+
+        if (chatMode == MODE_SCHEDULED || !allowChatActions || selectedMessagesIds[0].size() != 0 && selectedMessagesIds[1].size() != 0) {
+            return false;
+        } else if (selectedCount == 1) {
+            return true;
+        } else {
+            long lastGroupId = 0;
+            for (int a = 0; a < 2; a++) {
+                for (int b = 0, N = selectedMessagesIds[a].size(); b < N; b++) {
+                    MessageObject message = selectedMessagesIds[a].valueAt(b);
+                    long groupId = message.getGroupId();
+                    if (groupId == 0 || lastGroupId != 0 && lastGroupId != groupId) {
+                        return false;
+                    }
+                    lastGroupId = groupId;
+                }
+            }
+        }
+        if (threadMessageObjects != null) {
+            for (int b = 0, N = selectedMessagesIds[0].size(); b < N; b++) {
+                MessageObject message = selectedMessagesIds[0].valueAt(b);
+                if (threadMessageObjects.contains(message)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void processRowSelect(View view, boolean outside, float touchX, float touchY) {
