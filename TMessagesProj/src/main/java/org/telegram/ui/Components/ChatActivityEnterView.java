@@ -1870,9 +1870,13 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
 
             private boolean processChange;
             private boolean nextChangeIsSend;
+            private Object[] spansToKeep = null;
 
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+            public void beforeTextChanged(CharSequence charSequence, int start, int count, int after) {
+                if (isPaste && (charSequence instanceof Spanned)) {
+                    spansToKeep = ((Spanned) charSequence).getSpans(0, charSequence.length(), Object.class);
+                }
             }
 
             @Override
@@ -1919,11 +1923,23 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
                         sendMessage();
                         nextChangeIsSend = false;
                     }
-                    if (processChange) {
-                        ImageSpan[] spans = editable.getSpans(0, editable.length(), ImageSpan.class);
+                    if (spansToKeep != null) {
+                        Object[] spans = editable.getSpans(0, editable.length(), Object.class);
                         for (int i = 0; i < spans.length; i++) {
-                            editable.removeSpan(spans[i]);
+                            boolean keep = false;
+                            for (int j = 0; j < spansToKeep.length; j++) {
+                                if (spans[i] == spansToKeep[j]) {
+                                    keep = true;
+                                    break;
+                                }
+                            }
+                            if (!keep) {
+                                editable.removeSpan(spans[i]);
+                            }
                         }
+                        spansToKeep = null;
+                    }
+                    if (processChange) {
                         Emoji.replaceEmoji(editable, messageEditText.getPaint().getFontMetricsInt(), AndroidUtilities.dp(20), false);
                         processChange = false;
                     }
