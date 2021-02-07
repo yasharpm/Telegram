@@ -2962,7 +2962,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         emptyViewContainer.setOnTouchListener((v, event) -> true);
 
         int distance = getArguments().getInt("nearby_distance", -1);
-        if ((distance >= 0 || preloadedGreetingsSticker != null) && currentUser != null) {
+        if ((distance >= 0 || preloadedGreetingsSticker != null) && currentUser != null && !userBlocked) {
             greetingsViewContainer = new ChatGreetingsView(context, currentUser, distance, preloadedGreetingsSticker);
             greetingsViewContainer.setListener((sticker) -> {
                 animatingDocuments.put(sticker, 0);
@@ -13375,6 +13375,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 userBlocked = getMessagesController().blockePeers.indexOfKey(currentUser.id) >= 0;
                 if (oldValue != userBlocked) {
                     updateBottomOverlay();
+
+                    if (userBlocked && greetingsViewContainer != null) {
+                        emptyViewContainer.removeView(greetingsViewContainer);
+                    }
                 }
             }
         } else if (id == NotificationCenter.fileNewChunkAvailable) {
