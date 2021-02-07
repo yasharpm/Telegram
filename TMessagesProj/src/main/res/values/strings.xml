@@ -4108,6 +4108,8 @@
     <string name="formatterMonthYear">MMM yyyy</string>
     <string name="formatterStats12H">MMM dd yyyy, h:mm a</string>
     <string name="formatterStats24H">MMM dd yyyy, HH:mm</string>
+    <string name="formatterCopy12H">dd.mm.yy h:mm a</string>
+    <string name="formatterCopy24H">dd.mm.yy HH:mm</string>
     <string name="formatterBannedUntil12H">MMM dd yyyy, h:mm a</string>
     <string name="formatterBannedUntil24H">MMM dd yyyy, HH:mm</string>
     <string name="formatterBannedUntilThisYear12H">MMM dd, h:mm a</string>
