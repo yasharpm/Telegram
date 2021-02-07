@@ -1103,7 +1103,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 @Override
                 public void onAnimationStart(Animator animation) {
                     final View menuItem = getSecondaryMenuItem();
-                    if (menuItem != null && (menuItem != searchItem || !expanded)) {
+                    if (menuItem != null && (menuItem != searchItem || !expanded) && !overlaysView.isOverlaysVisible) {
                         menuItem.setVisibility(VISIBLE);
                     }
                     if (videoCallItemVisible) {
