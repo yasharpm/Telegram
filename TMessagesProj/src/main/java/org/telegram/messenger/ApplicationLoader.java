@@ -59,6 +59,7 @@ public class ApplicationLoader extends Application {
     public static volatile boolean mainInterfacePausedStageQueue = true;
     public static boolean canDrawOverlays;
     public static volatile long mainInterfacePausedStageQueueTime;
+    public static volatile long mainInterfaceStoppedTime = 0;
 
     public static boolean hasPlayServices;
 

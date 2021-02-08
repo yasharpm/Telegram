@@ -3339,6 +3339,16 @@ public class NotificationsController extends BaseController {
                 notifyDisabled = true;
             }
 
+            if (!notifyDisabled && ApplicationLoader.mainInterfaceStopped && (System.currentTimeMillis() - ApplicationLoader.mainInterfaceStoppedTime) / 1000 > 1200) {
+                TLRPC.User currentUser = UserConfig.getInstance(currentAccount).getCurrentUser();
+                if (currentUser != null) {
+                    int currentTime = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                    if (currentUser.status.expires - currentTime > 0) {
+                        notifyDisabled = true;
+                    }
+                }
+            }
+
             if (!notifyDisabled && dialog_id == override_dialog_id && chat != null) {
                 int notifyMaxCount;
                 int notifyDelay;

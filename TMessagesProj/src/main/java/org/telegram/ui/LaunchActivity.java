@@ -3826,6 +3826,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
         super.onStop();
         Browser.unbindCustomTabsService(this);
         ApplicationLoader.mainInterfaceStopped = true;
+        ApplicationLoader.mainInterfaceStoppedTime = System.currentTimeMillis();
         GroupCallPip.updateVisibility(this);
     }
 
