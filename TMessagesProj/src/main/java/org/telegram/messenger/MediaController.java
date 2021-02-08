@@ -2731,7 +2731,13 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                     if (tag != emojiSoundPlayerNum) {
                                         return;
                                     }
-                                    if (playbackState == ExoPlayer.STATE_ENDED) {
+                                    if (playbackState == ExoPlayer.STATE_READY) {
+                                        if (playingMessageObject != null) {
+                                            MessageObject m = playingMessageObject;
+                                            cleanupPlayer(false, false);
+                                            playMessage(m);
+                                        }
+                                    } else if (playbackState == ExoPlayer.STATE_ENDED) {
                                         if (emojiSoundPlayer != null) {
                                             try {
                                                 emojiSoundPlayer.releasePlayer(true);
