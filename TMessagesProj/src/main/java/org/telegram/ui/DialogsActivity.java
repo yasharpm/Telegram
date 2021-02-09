@@ -5144,6 +5144,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                     if (AndroidUtilities.isTablet()) {
                                         getNotificationCenter().postNotificationName(NotificationCenter.closeChats, selectedDialog);
                                     }
+                                    getMessagesController().checkIfFolderEmpty(folderId);
                                 }
                             }
                         });
