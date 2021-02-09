@@ -70,6 +70,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Keep;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.ColorUtils;
@@ -79,6 +80,7 @@ import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.ListUpdateCallback;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
@@ -7566,9 +7568,37 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
         updateRowsIds();
         diffCallback.fillPositions(diffCallback.newPositionToItem);
-        DiffUtil.calculateDiff(diffCallback).dispatchUpdatesTo(listAdapter);
-        saveScrollPosition();
-        AndroidUtilities.updateVisibleRows(listView);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(diffCallback);
+
+        if (lastMeasuredContentWidth != 0) {
+            result.dispatchUpdatesTo(new ListUpdateCallback() {
+                @Override
+                public void onInserted(int position, int count) {
+                    lastMeasuredContentWidth = 0;
+                }
+
+                @Override
+                public void onRemoved(int position, int count) {
+                    lastMeasuredContentWidth = 0;
+                }
+
+                @Override
+                public void onMoved(int fromPosition, int toPosition) {
+                    lastMeasuredContentWidth = 0;
+                }
+
+                @Override
+                public void onChanged(int position, int count, @Nullable Object payload) {
+                    lastMeasuredContentWidth = 0;
+                }
+            });
+        }
+
+        if (lastMeasuredContentWidth == 0) {
+            result.dispatchUpdatesTo(listAdapter);
+            saveScrollPosition();
+            AndroidUtilities.updateVisibleRows(listView);
+        }
     }
 
     private void saveScrollPosition() {
