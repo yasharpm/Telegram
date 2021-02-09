@@ -4356,15 +4356,17 @@ public class NotificationsController extends BaseController {
         }
 
         if (useSummaryNotification) {
-            if (BuildVars.LOGS_ENABLED) {
-                FileLog.d("show summary with id " + notificationId);
-            }
-            try {
-                notificationManager.notify(notificationId, mainNotification);
-            } catch (SecurityException e) {
-                FileLog.e(e);
-                resetNotificationSound(notificationBuilder, dialogId, chatName, vibrationPattern, ledColor, sound, importance, isDefault, isInApp, isSilent, chatType);
-            }
+            AndroidUtilities.runOnUIThread(() -> {
+                if (BuildVars.LOGS_ENABLED) {
+                    FileLog.d("show summary with id " + notificationId);
+                }
+                try {
+                    notificationManager.notify(notificationId, mainNotification);
+                } catch (SecurityException e) {
+                    FileLog.e(e);
+                    resetNotificationSound(notificationBuilder, dialogId, chatName, vibrationPattern, ledColor, sound, importance, isDefault, isInApp, isSilent, chatType);
+                }
+            }, 100);
         } else {
             if (openedInBubbleDialogs.isEmpty()) {
                 notificationManager.cancel(notificationId);
