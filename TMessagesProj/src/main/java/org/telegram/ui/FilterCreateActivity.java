@@ -557,28 +557,6 @@ public class FilterCreateActivity extends BaseFragment {
         });
     }
 
-    private static void processAddFilter(MessagesController.DialogFilter filter, int newFilterFlags, String newFilterName, ArrayList<Integer> newAlwaysShow, ArrayList<Integer> newNeverShow, boolean creatingNew, boolean atBegin, boolean hasUserChanged, boolean resetUnreadCounter, BaseFragment fragment, Runnable onFinish) {
-        if (filter.flags != newFilterFlags || hasUserChanged) {
-            filter.pendingUnreadCount = -1;
-            if (resetUnreadCounter) {
-                filter.unreadCount = -1;
-            }
-        }
-        filter.flags = newFilterFlags;
-        filter.name = newFilterName;
-        filter.neverShow = newNeverShow;
-        filter.alwaysShow = newAlwaysShow;
-        if (creatingNew) {
-            fragment.getMessagesController().addFilter(filter, atBegin);
-        } else {
-            fragment.getMessagesController().onFilterUpdate(filter);
-        }
-        fragment.getMessagesStorage().saveDialogFilter(filter, atBegin, true);
-        if (onFinish != null) {
-            onFinish.run();
-        }
-    }
-
     public static void saveFilterToServer(MessagesController.DialogFilter filter, int newFilterFlags, String newFilterName, ArrayList<Integer> newAlwaysShow, ArrayList<Integer> newNeverShow, LongSparseArray<Integer> newPinned, boolean creatingNew, boolean atBegin, boolean hasUserChanged, boolean resetUnreadCounter, boolean progress, BaseFragment fragment, Runnable onFinish) {
         if (fragment == null || fragment.getParentActivity() == null) {
             return;
@@ -591,102 +569,15 @@ public class FilterCreateActivity extends BaseFragment {
         } else {
             progressDialog = null;
         }
-        TLRPC.TL_messages_updateDialogFilter req = new TLRPC.TL_messages_updateDialogFilter();
-        req.id = filter.id;
-        req.flags |= 1;
-        req.filter = new TLRPC.TL_dialogFilter();
-        req.filter.contacts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_CONTACTS) != 0;
-        req.filter.non_contacts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_NON_CONTACTS) != 0;
-        req.filter.groups = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_GROUPS) != 0;
-        req.filter.broadcasts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_CHANNELS) != 0;
-        req.filter.bots = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_BOTS) != 0;
-        req.filter.exclude_muted = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_MUTED) != 0;
-        req.filter.exclude_read = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_READ) != 0;
-        req.filter.exclude_archived = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED) != 0;
-        req.filter.id = filter.id;
-        req.filter.title = newFilterName;
-        MessagesController messagesController = fragment.getMessagesController();
-        ArrayList<Integer> pinArray = new ArrayList<>();
-        if (newPinned.size() != 0) {
-            for (int a = 0, N = newPinned.size(); a < N; a++) {
-                int key = (int) newPinned.keyAt(a);
-                if (key == 0) {
-                    continue;
+        fragment.getMessagesController().saveFilterToServer(filter, newFilterFlags, newFilterName, newAlwaysShow, newNeverShow, newPinned, creatingNew, atBegin, hasUserChanged, resetUnreadCounter, progress, () -> {
+            try {
+                if (progressDialog != null) {
+                    progressDialog.dismiss();
                 }
-                pinArray.add(key);
+            } catch (Exception e) {
+                FileLog.e(e);
             }
-            Collections.sort(pinArray, (o1, o2) -> {
-                int idx1 = newPinned.get(o1);
-                int idx2 = newPinned.get(o2);
-                if (idx1 > idx2) {
-                    return 1;
-                } else if (idx1 < idx2) {
-                    return -1;
-                }
-                return 0;
-            });
-        }
-        for (int b = 0; b < 3; b++) {
-            ArrayList<Integer> fromArray;
-            ArrayList<TLRPC.InputPeer> toArray;
-            if (b == 0) {
-                fromArray = newAlwaysShow;
-                toArray = req.filter.include_peers;
-            } else if (b == 1) {
-                fromArray = newNeverShow;
-                toArray = req.filter.exclude_peers;
-            } else {
-                fromArray = pinArray;
-                toArray = req.filter.pinned_peers;
-            }
-            for (int a = 0, N = fromArray.size(); a < N; a++) {
-                long did = fromArray.get(a);
-                if (b == 0 && newPinned.indexOfKey(did) >= 0) {
-                    continue;
-                }
-                int lowerId = (int) did;
-                if (lowerId != 0) {
-                    if (lowerId > 0) {
-                        TLRPC.User user = messagesController.getUser(lowerId);
-                        if (user != null) {
-                            TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerUser();
-                            inputPeer.user_id = lowerId;
-                            inputPeer.access_hash = user.access_hash;
-                            toArray.add(inputPeer);
-                        }
-                    } else {
-                        TLRPC.Chat chat = messagesController.getChat(-lowerId);
-                        if (chat != null) {
-                            if (ChatObject.isChannel(chat)) {
-                                TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerChannel();
-                                inputPeer.channel_id = -lowerId;
-                                inputPeer.access_hash = chat.access_hash;
-                                toArray.add(inputPeer);
-                            } else {
-                                TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerChat();
-                                inputPeer.chat_id = -lowerId;
-                                toArray.add(inputPeer);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        fragment.getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            if (progress) {
-                try {
-                    if (progressDialog != null) {
-                        progressDialog.dismiss();
-                    }
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-                processAddFilter(filter, newFilterFlags, newFilterName, newAlwaysShow, newNeverShow, creatingNew, atBegin, hasUserChanged, resetUnreadCounter, fragment, onFinish);
-            }
-        }));
-        if (!progress) {
-            processAddFilter(filter, newFilterFlags, newFilterName, newAlwaysShow, newNeverShow, creatingNew, atBegin, hasUserChanged, resetUnreadCounter, fragment, onFinish);
-        }
+        }, onFinish);
     }
 
     @Override

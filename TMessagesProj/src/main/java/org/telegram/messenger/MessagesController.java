@@ -42,6 +42,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.FilterCreateActivity;
 import org.telegram.ui.ProfileActivity;
 
 import java.io.File;
@@ -51,6 +52,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1242,6 +1244,122 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         } else {
             sortDialogs(null);
+        }
+    }
+
+    private void processAddFilter(MessagesController.DialogFilter filter, int newFilterFlags, String newFilterName, ArrayList<Integer> newAlwaysShow, ArrayList<Integer> newNeverShow, boolean creatingNew, boolean atBegin, boolean hasUserChanged, boolean resetUnreadCounter, Runnable onFinish) {
+        if (filter.flags != newFilterFlags || hasUserChanged) {
+            filter.pendingUnreadCount = -1;
+            if (resetUnreadCounter) {
+                filter.unreadCount = -1;
+            }
+        }
+        filter.flags = newFilterFlags;
+        filter.name = newFilterName;
+        filter.neverShow = newNeverShow;
+        filter.alwaysShow = newAlwaysShow;
+        if (creatingNew) {
+            addFilter(filter, atBegin);
+        } else {
+            onFilterUpdate(filter);
+        }
+        getMessagesStorage().saveDialogFilter(filter, atBegin, true);
+        if (onFinish != null) {
+            onFinish.run();
+        }
+    }
+
+    public void saveFilterToServer(MessagesController.DialogFilter filter, int newFilterFlags, String newFilterName, ArrayList<Integer> newAlwaysShow, ArrayList<Integer> newNeverShow, LongSparseArray<Integer> newPinned, boolean creatingNew, boolean atBegin, boolean hasUserChanged, boolean resetUnreadCounter, boolean progress, Runnable onProgress, Runnable onFinish) {
+        TLRPC.TL_messages_updateDialogFilter req = new TLRPC.TL_messages_updateDialogFilter();
+        req.id = filter.id;
+        req.flags |= 1;
+        req.filter = new TLRPC.TL_dialogFilter();
+        req.filter.contacts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_CONTACTS) != 0;
+        req.filter.non_contacts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_NON_CONTACTS) != 0;
+        req.filter.groups = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_GROUPS) != 0;
+        req.filter.broadcasts = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_CHANNELS) != 0;
+        req.filter.bots = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_BOTS) != 0;
+        req.filter.exclude_muted = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_MUTED) != 0;
+        req.filter.exclude_read = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_READ) != 0;
+        req.filter.exclude_archived = (newFilterFlags & MessagesController.DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED) != 0;
+        req.filter.id = filter.id;
+        req.filter.title = newFilterName;
+        ArrayList<Integer> pinArray = new ArrayList<>();
+        if (newPinned.size() != 0) {
+            for (int a = 0, N = newPinned.size(); a < N; a++) {
+                int key = (int) newPinned.keyAt(a);
+                if (key == 0) {
+                    continue;
+                }
+                pinArray.add(key);
+            }
+            Collections.sort(pinArray, (o1, o2) -> {
+                int idx1 = newPinned.get(o1);
+                int idx2 = newPinned.get(o2);
+                if (idx1 > idx2) {
+                    return 1;
+                } else if (idx1 < idx2) {
+                    return -1;
+                }
+                return 0;
+            });
+        }
+        for (int b = 0; b < 3; b++) {
+            ArrayList<Integer> fromArray;
+            ArrayList<TLRPC.InputPeer> toArray;
+            if (b == 0) {
+                fromArray = newAlwaysShow;
+                toArray = req.filter.include_peers;
+            } else if (b == 1) {
+                fromArray = newNeverShow;
+                toArray = req.filter.exclude_peers;
+            } else {
+                fromArray = pinArray;
+                toArray = req.filter.pinned_peers;
+            }
+            for (int a = 0, N = fromArray.size(); a < N; a++) {
+                long did = fromArray.get(a);
+                if (b == 0 && newPinned.indexOfKey(did) >= 0) {
+                    continue;
+                }
+                int lowerId = (int) did;
+                if (lowerId != 0) {
+                    if (lowerId > 0) {
+                        TLRPC.User user = getUser(lowerId);
+                        if (user != null) {
+                            TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerUser();
+                            inputPeer.user_id = lowerId;
+                            inputPeer.access_hash = user.access_hash;
+                            toArray.add(inputPeer);
+                        }
+                    } else {
+                        TLRPC.Chat chat = getChat(-lowerId);
+                        if (chat != null) {
+                            if (ChatObject.isChannel(chat)) {
+                                TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerChannel();
+                                inputPeer.channel_id = -lowerId;
+                                inputPeer.access_hash = chat.access_hash;
+                                toArray.add(inputPeer);
+                            } else {
+                                TLRPC.InputPeer inputPeer = new TLRPC.TL_inputPeerChat();
+                                inputPeer.chat_id = -lowerId;
+                                toArray.add(inputPeer);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            if (progress) {
+                if (onProgress != null) {
+                    onProgress.run();
+                }
+                processAddFilter(filter, newFilterFlags, newFilterName, newAlwaysShow, newNeverShow, creatingNew, atBegin, hasUserChanged, resetUnreadCounter, onFinish);
+            }
+        }));
+        if (!progress) {
+            processAddFilter(filter, newFilterFlags, newFilterName, newAlwaysShow, newNeverShow, creatingNew, atBegin, hasUserChanged, resetUnreadCounter, onFinish);
         }
     }
 
@@ -4484,6 +4602,26 @@ public class MessagesController extends BaseController implements NotificationCe
                         int offset = nextDialogsCacheOffset.get(dialog.folder_id, 0);
                         if (offset > 0) {
                             nextDialogsCacheOffset.put(dialog.folder_id, offset - 1);
+                        }
+                        int lowerId = lower_part;
+                        if (lowerId == 0) {
+                            TLRPC.EncryptedChat encryptedChat = getEncryptedChat(high_id);
+                            if (encryptedChat != null) {
+                                lowerId = encryptedChat.user_id;
+                            }
+                        }
+                        if (lowerId != 0) {
+                            for (int a = 0, N = dialogFilters.size(); a < N; a++) {
+                                DialogFilter filter = dialogFilters.get(a);
+
+                                if (filter.alwaysShow.contains(lowerId) || filter.neverShow.contains(lowerId)) {
+                                    filter.alwaysShow.remove((Integer) lowerId);
+                                    filter.neverShow.remove((Integer) lowerId);
+                                    filter.pinnedDialogs.remove(did);
+
+                                    saveFilterToServer(filter, filter.flags, filter.name, filter.alwaysShow, filter.neverShow, filter.pinnedDialogs, false, false, false, false, false, null, null);
+                                }
+                            }
                         }
                     }
                 } else {
