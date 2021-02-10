@@ -8703,7 +8703,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     private void checkAutoDownloadMessage(MessageObject object) {
-        if (object.mediaExists) {
+        if (object.mediaExists || object.loadingCancelled) {
             return;
         }
         TLRPC.Message message = object.messageOwner;
