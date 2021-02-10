@@ -42,7 +42,6 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.DialogsActivity;
-import org.telegram.ui.FilterCreateActivity;
 import org.telegram.ui.ProfileActivity;
 
 import java.io.File;
@@ -52,7 +51,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
