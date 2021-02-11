@@ -95,6 +95,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
     private int checkReqId;
     private String lastCheckName;
     private Runnable checkRunnable;
+    private boolean checkingName = false;
     private boolean lastNameAvailable;
     private boolean loadingInvite;
     private TLRPC.TL_chatInviteExported invite;
@@ -335,7 +336,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                 if (ignoreTextChanges) {
                     return;
                 }
-                checkUserName(usernameTextView.getText().toString());
+                checkUserName(usernameTextView.getText().toString(), false);
             }
 
             @Override
@@ -446,14 +447,16 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         if (getParentActivity() == null) {
             return false;
         }
-        if (!isPrivate && ((currentChat.username == null && usernameTextView.length() != 0) || (currentChat.username != null && !currentChat.username.equalsIgnoreCase(usernameTextView.getText().toString())))) {
-            if (usernameTextView.length() != 0 && !lastNameAvailable) {
-                Vibrator v = (Vibrator) getParentActivity().getSystemService(Context.VIBRATOR_SERVICE);
-                if (v != null) {
-                    v.vibrate(200);
+        if (!isPrivate) {
+            if (TextUtils.isEmpty(currentChat.username) || !lastNameAvailable) {
+                if (!checkUserName(usernameTextView.getText().toString(), true) || checkRunnable != null) {
+                    Vibrator v = (Vibrator) getParentActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                    if (v != null) {
+                        v.vibrate(200);
+                    }
+                    AndroidUtilities.shakeView(checkTextView, 2, 0);
+                    return false;
                 }
-                AndroidUtilities.shakeView(checkTextView, 2, 0);
-                return false;
             }
         }
 
@@ -517,7 +520,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                                     AndroidUtilities.runOnUIThread(() -> {
                                         canCreatePublic = true;
                                         if (usernameTextView.length() > 0) {
-                                            checkUserName(usernameTextView.getText().toString());
+                                            checkUserName(usernameTextView.getText().toString(), false);
                                         }
                                         updatePrivatePublic();
                                     });
@@ -599,13 +602,16 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         usernameTextView.clearFocus();
     }
 
-    private boolean checkUserName(final String name) {
-        if (name != null && name.length() > 0) {
+    private boolean checkUserName(final String name, boolean donePressed) {
+        if (donePressed || (name != null && name.length() > 0)) {
             checkTextView.setVisibility(View.VISIBLE);
         } else {
             checkTextView.setVisibility(View.GONE);
         }
         typeInfoCell.setBackgroundDrawable(checkTextView.getVisibility() == View.VISIBLE ? null : Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
+        if (lastCheckName == null || checkingName) {
+            donePressed = false;
+        }
         if (checkRunnable != null) {
             AndroidUtilities.cancelRunOnUIThread(checkRunnable);
             checkRunnable = null;
@@ -654,11 +660,18 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             return false;
         }
 
+        if (donePressed) {
+            checkTextView.setVisibility(View.GONE);
+            return true;
+        }
+
+        checkingName = true;
         checkTextView.setText(LocaleController.getString("LinkChecking", R.string.LinkChecking));
         checkTextView.setTextColor(Theme.key_windowBackgroundWhiteGrayText8);
         lastCheckName = name;
         checkRunnable = () -> {
             TLRPC.TL_channels_checkUsername req = new TLRPC.TL_channels_checkUsername();
+            checkingName = false;
             req.username = name;
             req.channel = getMessagesController().getInputChannel(chatId);
             checkReqId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
