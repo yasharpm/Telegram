@@ -4135,7 +4135,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     public boolean onlyDialogsAdapter() {
         int dialogsCount = getMessagesController().getTotalDialogsCount();
-        return onlySelect || !searchViewPager.dialogsSearchAdapter.hasRecentSearch() || dialogsCount <= 10;
+        int archivedDialogsCount = getMessagesController().getDialogs(1).size();
+        return onlySelect || !searchViewPager.dialogsSearchAdapter.hasRecentSearch() || (dialogsCount + archivedDialogsCount) <= 10;
     }
 
     private void updateFilterTabsVisibility(boolean animated) {
